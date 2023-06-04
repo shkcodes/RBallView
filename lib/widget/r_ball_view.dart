@@ -1,59 +1,58 @@
 import 'dart:convert';
 import 'dart:collection';
 import 'dart:math';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 
 typedef OnTapRBallTagCallback = void Function(RBallTagData);
 
-//手指按下时命中的point
+//The point hit when the finger is pressed
 PointAnimationSequence? pointAnimationSequence;
 
-//球半径
+//sphere radius
 int radius = 150;
 
-///文字颜色
+///text color
 Color textColor = const Color(0xFF333333);
 
-///文字高亮颜色
+///text highlight color
 Color highLightTextColor = const Color(0xFF000000);
 
 class RBallView extends StatefulWidget {
   final MediaQueryData mediaQueryData;
 
-  ///需要展示的关键词
+  ///Keywords to display
   final List<RBallTagData> keywords;
 
-  ///需要高亮的关键词
+  ///Keywords that need to be highlighted
   final List<RBallTagData> highlight;
 
-  /// 最多显示多个字符
+  /// Display up to multiple characters
   final int maxChar;
 
-  /// 点击回调
+  /// click callback
   final OnTapRBallTagCallback? onTapRBallTagCallback;
 
-  /// 是否运行动画
+  /// Whether to run animation
   final bool isAnimate;
 
-  /// 球体容器装饰
+  /// Sphere Container Decoration
   final Decoration? decoration;
 
-  /// 是否展示球体容器装饰
+  /// Whether to show the sphere container decoration
   final bool isShowDecoration;
 
-  ///仰角基准值
-  ///均匀分布仰角
+  ///elevation reference value
+  ///Uniform distribution of elevation angles
   final List<double>? centers;
 
-  ///球体半径
+  ///sphere radius
   final int? radius;
 
-  ///文字颜色
+  ///text color
   final Color? textColor;
 
-  ///文字高亮颜色
+  ///text highlight color
   final Color? highLightTextColor;
 
   const RBallView({
@@ -80,7 +79,7 @@ class RBallView extends StatefulWidget {
 
 class _RBallViewState extends State<RBallView>
     with SingleTickerProviderStateMixin {
-  //带光晕的球图片宽度
+  //Ball image width with halo
   late double sizeOfBallWithFlare;
 
   List<Point> points = [];
@@ -89,23 +88,23 @@ class _RBallViewState extends State<RBallView>
   late AnimationController controller;
   double currentRadian = 0;
 
-  //手指移动的上一个位置
+  //The previous position of the finger movement
   late Offset lastPosition;
 
-  //手指按下的位置
+  //where the finger is pressed
   late Offset downPosition;
 
-  //上次点击并命中关键词的时间
+  //The time when the keyword was last clicked and hit
   int lastHitTime = 0;
 
-  //当前的旋转轴
+  //current axis of rotation
   Point axisVector = getAxisVector(Offset(2, -1));
 
   @override
   void initState() {
     super.initState();
 
-    /// 初始化工具类
+    /// Initialize tool class
     if (widget.keywords.length < 10) {
       RBallViewUtil.nameHalfSize = 12;
       RBallViewUtil.pointHalfTop = 6;
@@ -124,18 +123,18 @@ class _RBallViewState extends State<RBallView>
       RBallViewUtil.pointHalfWidth = 9;
     }
 
-    // 初始化常量值
+    // Initialize constant value
     textColor = widget.textColor ?? const Color(0xFF333333);
     highLightTextColor = widget.highLightTextColor ?? const Color(0xFF000000);
 
-    //计算球尺寸、半径等
+    //Calculate ball size, radius, etc.
     sizeOfBallWithFlare = widget.mediaQueryData.size.width - 2 * 10;
     radius = widget.radius ?? ((sizeOfBallWithFlare * 32 / 35) / 2).round();
 
-    //初始化点
+    //initialization point
     generatePoints(widget.keywords, widget.maxChar);
 
-    //动画
+    //animation
     controller = AnimationController(
         duration: Duration(milliseconds: 40000), vsync: this);
     animation = Tween(begin: 0.0, end: pi * 2).animate(controller);
@@ -160,12 +159,12 @@ class _RBallViewState extends State<RBallView>
   void didUpdateWidget(RBallView oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    //数据有变化，重新初始化点
+    //Data has changed, reinitialize the point
     if (oldWidget.keywords != widget.keywords) {
       generatePoints(widget.keywords, widget.maxChar);
     }
 
-    // 动画状态改变
+    // animation state change
     if (oldWidget.isAnimate != widget.isAnimate) {
       if (controller.isAnimating && !widget.isAnimate) {
         controller.stop();
@@ -185,8 +184,8 @@ class _RBallViewState extends State<RBallView>
   void generatePoints(List<RBallTagData> keywords, int maxChar) {
     points.clear();
     Random random = Random();
-    //仰角基准值
-    //均匀分布仰角
+    //elevation reference value
+    //Uniform distribution of elevation angles
     List<double> centers = widget.centers ??
         [
           0.5,
@@ -201,15 +200,15 @@ class _RBallViewState extends State<RBallView>
           0.8,
         ];
 
-    //将2pi分为keywords.length等份
+    //Divide 2pi into equal parts of keywords.length
     double dAngleStep = 2 * pi / keywords.length;
     for (int i = 0; i < keywords.length; i++) {
-      //极坐标方位角
+      //polar azimuth
       double dAngle = dAngleStep * i;
-      //仰角
+      //elevation angle
       double eAngle = (centers[i % 10] + (random.nextDouble() - 0.5) / 10) * pi;
 
-      //球极坐标转为直角坐标
+      //Spherical Coordinates to Cartesian Coordinates
       double x = radius * sin(eAngle) * sin(dAngle);
       double y = radius * cos(eAngle);
       double z = radius * sin(eAngle) * cos(dAngle);
@@ -222,9 +221,9 @@ class _RBallViewState extends State<RBallView>
         showName =
             keywords[i].tag.characters.getRange(0, maxChar).toString() + '...';
       }
-      //计算point在各个z坐标时的paragraph
+      //Calculate the paragraph of the point at each z coordinate
       point.paragraphs = [];
-      //每3个z生成一个paragraphs，节省内存
+      //Generate a paragraph every 3 z, saving memory
       for (int z = -radius; z <= radius; z += 3) {
         point.paragraphs.add(
           buildText(
@@ -240,7 +239,7 @@ class _RBallViewState extends State<RBallView>
     }
   }
 
-  ///检查此关键字是否需要高亮
+  ///Check if this keyword needs to be highlighted
   bool _needHight(RBallTagData tag) {
     bool ret = false;
     if (widget.highlight.length > 0) {
@@ -282,11 +281,11 @@ class _RBallViewState extends State<RBallView>
         downPosition = convertCoordinate(event.localPosition);
         lastPosition = convertCoordinate(event.localPosition);
 
-        //速度跟踪队列
+        //speed tracking queue
         clearQueue();
         addToQueue(PositionWithTime(downPosition, now));
 
-        //手指触摸时停止动画
+        //Stop animation on finger touch
         controller.stop();
       },
       onPointerMove: (PointerMoveEvent event) {
@@ -298,17 +297,18 @@ class _RBallViewState extends State<RBallView>
         Offset delta = Offset(currentPostion.dx - lastPosition.dx,
             currentPostion.dy - lastPosition.dy);
         double distance = sqrt(delta.dx * delta.dx + delta.dy * delta.dy);
-        //若计算量级太小，框架内部会报精度溢出的错误
+        //If the calculation level is too small,
+        // an error of precision overflow will be reported inside the framework
         if (distance > 2) {
-          //旋转点
+          //rotation point
           setState(() {
             lastPosition = currentPostion;
 
-            //球体应该旋转的弧度角度 = 距离/radius
+            //The angle in radians the sphere should rotate = distance/radius
             double radian = distance / radius;
             //旋转轴
             axisVector = getAxisVector(delta);
-            //更新点的位置
+            //The location of the update point
             for (int i = 0; i < points.length; i++) {
               rotatePoint(axisVector, points[i], radian);
             }
@@ -321,29 +321,30 @@ class _RBallViewState extends State<RBallView>
 
         addToQueue(PositionWithTime(upPosition, now));
 
-        //检测是否是fling手势
+        //Detect whether it is a fling gesture
         Offset velocity = getVelocity();
         if (widget.isAnimate) {
-          //速度模量>=1就认为是fling手势
+          //Velocity modulus >=1 is considered fling gesture
           if (sqrt(velocity.dx * velocity.dx + velocity.dy * velocity.dy) >=
               1) {
-            //开始fling动画
+            //Start fling animation
             currentRadian = 0;
             controller.fling();
           } else {
-            //开始匀速动画
+            //Start animation at constant speed
             currentRadian = 0;
             controller.forward(from: 0.0);
           }
         }
 
-        //检测点击事件
+        //Detect click events
         double distanceSinceDown = sqrt(
             pow(upPosition.dx - downPosition.dx, 2) +
                 pow(upPosition.dy - downPosition.dy, 2));
-        //按下和抬起点的距离小于4，认为是点击事件
+        //If the distance between the pressed and lifted points is less than 4,
+        // it is considered a click event
         if (distanceSinceDown < 4) {
-          //寻找命中的point
+          //Find the hit point
           int searchRadiusW = RBallViewUtil.nameHalfSize.toInt() * 3;
           int searchRadiusH = (RBallViewUtil.nameHalfSize +
                       RBallViewUtil.pointHalfTop +
@@ -351,19 +352,19 @@ class _RBallViewState extends State<RBallView>
                   .toInt() *
               2;
           for (int i = 0; i < points.length; i++) {
-            //points[i].z >= 0：只在球正面的点中寻找
+            //points[i].z >= 0：Find only points on the front of the ball
             if (points[i].z >= 0 &&
                 (upPosition.dx - points[i].x).abs() < searchRadiusW &&
                 (upPosition.dy - points[i].y).abs() < searchRadiusH) {
               int now = DateTime.now().millisecondsSinceEpoch;
-              //防止双击
+              //prevent double click
               if (now - lastHitTime > 2000) {
                 lastHitTime = now;
-                //创建点选中动画序列
+                //Create a point-and-click animation sequence
                 pointAnimationSequence = PointAnimationSequence(
                     points[i], _needHight(points[i].data));
 
-                // 回调
+                // call back
                 widget.onTapRBallTagCallback?.call(points[i].data);
               }
               break;
@@ -385,10 +386,10 @@ class _RBallViewState extends State<RBallView>
     );
   }
 
-  ///速度跟踪队列
+  ///speed tracking queue
   Queue<PositionWithTime> queue = Queue();
 
-  ///添加跟踪点
+  ///add tracepoint
   void addToQueue(PositionWithTime p) {
     int lengthOfQueue = 5;
     if (queue.length >= lengthOfQueue) {
@@ -398,13 +399,13 @@ class _RBallViewState extends State<RBallView>
     queue.add(p);
   }
 
-  ///清空队列
+  ///clear queue
   void clearQueue() {
     queue.clear();
   }
 
-  ///计算速度
-  ///速度单位：像素/毫秒
+  ///calculation speed
+  ///Speed unit: pixel/millisecond
   Offset getVelocity() {
     Offset ret = Offset.zero;
 
@@ -435,18 +436,18 @@ class MyPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    //绘制文字
+    //draw text
     for (int i = 0; i < points.length; i++) {
       Point point = points[i];
       List<double> xy = transformCoordinate(point);
       ui.Paragraph p;
-      //是被选中的点，需要展示放大缩小效果
+      //It is the selected point, which needs to show the effect of zooming in and out
       if (pointAnimationSequence != null &&
           pointAnimationSequence?.point == point) {
-        //动画未播放完毕
+        //Animation didn't complete
         if (pointAnimationSequence!.paragraphs.isNotEmpty) {
           p = pointAnimationSequence!.paragraphs.removeFirst();
-          //动画已播放完毕
+          //animation finished
         } else {
           p = point.getParagraph(radius);
           pointAnimationSequence = null;
@@ -455,15 +456,16 @@ class MyPainter extends CustomPainter {
         p = point.getParagraph(radius);
       }
 
-      //获得文字的宽高
+      //Get the width and height of the text
       double halfWidth = p.minIntrinsicWidth / 2;
       double halfHeight = p.height / 2;
-      //绘制文字（point中是3d模型坐标系中的坐标，需要转换为绘图坐标系中的坐标）
+      //Draw text (point is the coordinate in the 3D model coordinate system,
+      // which needs to be converted to the coordinate in the drawing coordinate system)
       canvas.drawParagraph(
         p,
         Offset(xy[0] - halfWidth, xy[1] - halfHeight),
       );
-      //绘制圆点
+      //draw dots
       pointPaint
         ..color = Colors.primaries[i % 17]
             .withOpacity(RBallViewUtil.getPointOpacity(point.z))
@@ -479,7 +481,7 @@ class MyPainter extends CustomPainter {
     }
   }
 
-  ///将3d模型坐标系中的坐标转换为绘图坐标系中的坐标
+  ///Convert coordinates in the 3d model coordinate system to coordinates in the drawing coordinate system
   ///x2 = r+x1;y2 = r-y1;
   List<double> transformCoordinate(Point point) {
     return [radius + point.x, radius - point.y, point.z];
@@ -489,8 +491,8 @@ class MyPainter extends CustomPainter {
   bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
 
-///计算点point绕轴axis旋转radian弧度后的点坐标
-///计算依据：罗德里格旋转矢量公式
+///Calculate the point coordinates of the point point after rotating radian radians around the axis axis
+///Calculation basis: Rodrigue's rotation vector formula
 void rotatePoint(
   Point axis,
   Point point,
@@ -519,19 +521,19 @@ void rotatePoint(
   point.z = z;
 }
 
-///根据手指触摸移动的直线距离，计算球体应该转动的近似角度
-///单位角度对应的圆弧长度：2*pi*r/2*pi = 1/r
+///Calculate the approximate angle by which the sphere should turn based on the straight-line distance the finger touch moves
+///Arc length corresponding to unit angle：2*pi*r/2*pi = 1/r
 double getRadian(double distance) {
   return distance / radius;
 }
 
-//将绘图坐标系中的坐标转换为3d模型坐标系中的坐标
+//Convert coordinates in the drawing coordinate system to coordinates in the 3d model coordinate system
 Offset convertCoordinate(Offset offset) {
   return Offset(offset.dx - radius, radius - offset.dy);
 }
 
-///由旋转矢量得到旋转轴方向的单位矢量
-///将旋转矢量(x,y)逆时针旋转90度即可
+///Get the unit vector in the direction of the rotation axis from the rotation vector
+///Rotate the rotation vector (x, y) 90 degrees counterclockwise
 ///x2 = xcos(pi/2)-ysin(pi/2)
 ///y2 = xsin(pi/2)+ycos(pi/2)
 Point getAxisVector(Offset scrollVector) {
@@ -583,8 +585,8 @@ class Point {
 
   Point(this.x, this.y, this.z);
 
-  //z取值[-radius,radius]时的paragraph，依次存储在paragraphs中
-  //每3个z生成一个paragraphs
+  //The paragraph when z takes the value [-radius, radius] is stored in the paragraphs in turn
+  //Generate a paragraph every 3 z
   getParagraph(int radius) {
     int index = (z + radius).round() ~/ 3;
     return paragraphs[index];
@@ -608,14 +610,14 @@ class PointAnimationSequence {
 
     double fontSize = RBallViewUtil.getNameFontsize(point.z);
     double opacity = RBallViewUtil.getPointOpacity(point.z);
-    //字号从fontSize变化到16
+    //Font size changed from fontSize to 16
     for (double fs = fontSize;
         fs <= RBallViewUtil.nameHalfSize * 2 + 5;
         fs += 1) {
       paragraphs.addLast(
           buildText(point.data.tag, 2.0 * radius, fs, opacity, needHighLight));
     }
-    //字号从16变化到fontSize
+    //Font size changed from 16 to fontSize
     for (double fs = RBallViewUtil.nameHalfSize * 2 + 5;
         fs >= fontSize;
         fs -= 1) {
@@ -650,7 +652,7 @@ class RBallTagData {
       };
 }
 
-/// 工具方法
+/// Utility
 class RBallViewUtil {
   static int itemCount = 30;
 
@@ -659,30 +661,30 @@ class RBallViewUtil {
   static double pointHalfWidth = 9;
 
   ///
-  /// 获取名字大小, 对应文字的尺寸为[6,12]
+  /// Get the size of the name, the size of the corresponding text is [6,12]
   static double getNameFontsize(double z, {double? halfSize}) {
     halfSize ??= nameHalfSize;
     return _getDisplaySize(z, halfSize);
   }
 
-  /// 获取透明度, 对应点的透明度为[0.5,1]
+  /// Get the transparency, the transparency of the corresponding point is [0.5,1]
   static double getPointOpacity(double z, [double halfOpacity = 0.5]) {
     return _getDisplaySize(z, halfOpacity);
   }
 
-  /// 获取点和文字间距
+  /// Get point and text spacing
   static double getPointTopMargin(double z, {double? halfTop}) {
     halfTop ??= pointHalfTop;
     return _getDisplaySize(z, halfTop);
   }
 
-  /// 获取点大小
+  /// get point size
   static double getPointStrokeWidth(double z, {double? halfWidth}) {
     halfWidth ??= pointHalfWidth;
     return _getDisplaySize(z, halfWidth);
   }
 
-  /// 根据比例获取大小
+  /// Get the size according to the ratio
   static double _getDisplaySize(double z, double halfValue) {
     return halfValue + halfValue * (z + radius) / (2 * radius);
   }
